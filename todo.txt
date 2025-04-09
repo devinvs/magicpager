@@ -1,0 +1,3 @@
+- preload.c doesn't escape quotes properly
+- write the actual pager
+
