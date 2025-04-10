@@ -1,3 +1,5 @@
-- preload.c doesn't escape quotes properly
 - write the actual pager
-
+  + watch files/directories
+  + timer
+  + screen resize
+  + persistent scroll location

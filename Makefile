@@ -1,7 +1,7 @@
 .PHONY: all
 all: target/release/magic_pager.so target/release/mp
 
-target/release/mp: $(wildcard src/*.c)
+target/release/mp: $(wildcard src/*.rs)
 	cargo build --release
 
 target/release/magic_pager.so: src/preload.c
