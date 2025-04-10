@@ -110,11 +110,12 @@ char *readline(const char *prompt) {
         }
 
         // check if we are being executed by a shell
+        char exe_path[1024];
         char path[1024];
         pid_t pid = getpid();
-        sprintf(path, "/proc/%d/exe", pid);
+        sprintf(exe_path, "/proc/%d/exe", pid);
 
-        size_t n = readlink(path, path, 1023);
+        size_t n = readlink(exe_path, path, 1023);
         // ignore error case, shell is false
         if (n > 0) {
             path[n] = 0;
