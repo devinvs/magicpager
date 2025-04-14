@@ -38,22 +38,27 @@ char *rewrite(char *input) {
     // we are now guaranteed that pipe points to the string:
     //    | mp ...
     // now rewrite the string without the pipe...
-    char *new = malloc(strlen(input) + 5);
+    char *new = malloc(strlen(input) + 7);
     curr = new;
 
     // mp ...
     curr = stpcpy(curr, pipe+1);
 
-    // mp ... -- 
+    // mp ... -- "
     curr[0] = ' ';
     curr[1] = '-';
     curr[2] = '-';
     curr[3] = ' ';
-    curr+=3;
+    curr[4] = '"';
+    curr+=5;
 
-    // mp ... -- cat /etc/passwd | grep root | mp -t5
+    // mp ... -- "cat /etc/passwd | grep root
     pipe[0] = 0;
     curr = stpcpy(curr, input);
+
+    // mp ... -- "cat /etc/passwd | grep root"
+    curr[0] = '"';
+    curr[1] = 0;
 
     free(input);
     return new;
