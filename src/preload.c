@@ -13,6 +13,26 @@ char *(*og_readline)(const char *prompt) = NULL;
 // Are we being executed by a shell
 bool in_shell = false;
 
+// copy src into destination escaping any single quotes
+char *stpcpy_escape(char *dst, char *src) {
+    while (*src != 0) {
+        if (*src == '\'') {
+            dst[0] = '\'';
+            dst[1] = '\\';
+            dst[2] = '\'';
+            dst[3] = '\'';
+            dst += 4;
+        } else {
+            dst[0] = *src;
+            dst++;
+        }
+        src++;
+    }
+
+    dst[0] = 0;
+    return dst;
+}
+
 char *rewrite(char *input) {
     // rewrite the command string to take the last "mp" pipe and
     // wrap the whole expression in it, eg:
@@ -38,7 +58,14 @@ char *rewrite(char *input) {
     // we are now guaranteed that pipe points to the string:
     //    | mp ...
     // now rewrite the string without the pipe...
-    char *new = malloc(strlen(input) + 7);
+
+    // count the number of quotes that we need to escape
+    int quotes = 0;
+    for (char *c=input; c!=pipe; c++)
+        if (*c == '\'')
+            quotes++;
+
+    char *new = malloc(strlen(input) + 7 + quotes*3);
     curr = new;
 
     // mp ...
@@ -49,15 +76,15 @@ char *rewrite(char *input) {
     curr[1] = '-';
     curr[2] = '-';
     curr[3] = ' ';
-    curr[4] = '"';
+    curr[4] = '\'';
     curr+=5;
 
-    // mp ... -- "cat /etc/passwd | grep root
+    // mp ... -- 'cat /etc/passwd | grep root
     pipe[0] = 0;
-    curr = stpcpy(curr, input);
+    curr = stpcpy_escape(curr, input);
 
-    // mp ... -- "cat /etc/passwd | grep root"
-    curr[0] = '"';
+    // mp ... -- 'cat /etc/passwd | grep root'
+    curr[0] = '\'';
     curr[1] = 0;
 
     free(input);
