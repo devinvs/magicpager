@@ -1,10 +1,12 @@
 extern crate unicode_segmentation;
 
-use std::io::{BufRead, Read, Write};
+use std::io::{BufRead, Write};
 use std::process::Command;
 
 use crossterm::{cursor, style, terminal, ExecutableCommand, QueueableCommand};
 use unicode_segmentation::UnicodeSegmentation;
+
+use crate::opts::Options;
 
 #[derive(PartialEq, Eq)]
 enum Action {
@@ -46,10 +48,11 @@ pub struct State {
     // how much weve scrolled through the buffer
     pub scroll: (usize, usize),
     mode: Mode,
+    pub opts: Options,
 }
 
 impl State {
-    pub fn init(cmd: Command) -> State {
+    pub fn init(cmd: Command, opts: Options) -> State {
         std::io::stdout()
             .execute(terminal::EnterAlternateScreen)
             .unwrap();
@@ -62,6 +65,7 @@ impl State {
             term_size: (0, 0),
             scroll: (0, 0),
             mode: Mode::Normal,
+            opts,
         };
 
         me.update();
@@ -80,17 +84,14 @@ impl State {
             self.buf.push(line);
         }
 
-        // ensure that the scroll position is within the text
-        // self.buf_cur.1 = self.buf_cur.1.min(self.buf.len().saturating_sub(1));
-        // self.buf_cur.0 = self
-        //     .buf_cur
-        //     .0
-        //     .min(self.buf[self.buf_cur.1].len().saturating_sub(1));
+        // ensure that the scroll position/cursor is within the text
+        while self.scroll.1 + self.cursor.1 as usize > self.buf.len().saturating_sub(1) {
+            self.up();
+        }
     }
 
     fn left(&mut self) {
-        let hscroll = self.term_size.0 / 5;
-        if self.cursor.0 <= hscroll && self.scroll.0 > 0 {
+        if self.cursor.0 == 0 && self.scroll.0 > 0 {
             self.scroll.0 = self.scroll.0.saturating_sub(1);
         } else {
             self.cursor.0 = self.cursor.0.saturating_sub(1);
@@ -98,8 +99,7 @@ impl State {
     }
 
     fn right(&mut self) {
-        let hscroll = self.term_size.0 / 5;
-        if self.cursor.0 >= hscroll * 4 {
+        if self.cursor.0 == self.term_size.0 - 1 {
             self.scroll.0 += 1;
         } else {
             self.cursor.0 = (self.cursor.0 + 1).min(self.term_size.0 - 1);
@@ -118,7 +118,7 @@ impl State {
     fn down(&mut self) {
         let vscroll = self.term_size.1 / 5;
         if self.cursor.1 >= vscroll * 4
-            && self.scroll.1 + (self.term_size.1 as usize - 1) < self.buf.len() - 1
+            && self.scroll.1 + (self.term_size.1 as usize - 1) < self.buf.len()
         {
             self.scroll.1 += 1;
         } else {
@@ -216,7 +216,7 @@ impl State {
 
                     Action::Jump(n, 0)
                 }
-                'e' => Action::Jump(self.buf.len() - 1, 0),
+                'e' => Action::Jump(self.buf.len(), 0),
                 'h' => Action::Jump(self.cursor.1 as usize + self.scroll.1, 0),
                 'l' => {
                     let i = self.cursor.1 as usize + self.scroll.1;
@@ -267,7 +267,7 @@ impl State {
                 }
             }
             Action::Jump(row, col) => {
-                let row = row.min(self.buf.len() - 2);
+                let row = row.min(self.buf.len() - 1);
 
                 while self.scroll.1 + (self.cursor.1 as usize) < row {
                     self.down();
@@ -304,8 +304,7 @@ impl State {
         } + 1;
 
         let start_row = self.scroll.1;
-        let end_row =
-            (start_row + self.term_size.1 as usize - 1).min(self.buf.len().saturating_sub(1));
+        let end_row = (start_row + self.term_size.1 as usize - 1).min(self.buf.len());
 
         stdout
             .queue(terminal::Clear(terminal::ClearType::All))
@@ -347,11 +346,15 @@ impl State {
         print!(
             "{} {}",
             self.mode.to_string(),
-            self.cmd
-                .get_args()
-                .map(|arg| arg.to_string_lossy())
-                .nth(1)
-                .unwrap()
+            if let Some(f) = self.opts.file.as_ref() {
+                f.to_string_lossy()
+            } else {
+                self.cmd
+                    .get_args()
+                    .map(|arg| arg.to_string_lossy())
+                    .nth(1)
+                    .unwrap()
+            }
         );
 
         let cur_s = format!(
@@ -380,18 +383,5 @@ impl State {
             .unwrap();
 
         std::process::exit(0);
-    }
-
-    pub fn runloop(&mut self) {
-        let mut chars = std::io::stdin()
-            .bytes()
-            .map(|b| b.map(|c| c.to_ascii_lowercase()));
-
-        while let Some(Ok(c)) = chars.next() {
-            self.event(c as char);
-            self.draw();
-        }
-
-        self.exit();
     }
 }
