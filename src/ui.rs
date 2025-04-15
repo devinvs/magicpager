@@ -1,6 +1,6 @@
 extern crate unicode_segmentation;
 
-use std::io::{BufRead, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::process::Command;
 
 use crossterm::{cursor, style, terminal, ExecutableCommand, QueueableCommand};
@@ -70,18 +70,24 @@ impl State {
 
         me.update();
         me.draw();
-
         me
     }
 
     pub fn update(&mut self) {
         // execute command, parse lines, store in buffer
-        let res = self.cmd.output().unwrap();
         self.buf.clear();
+        let mut p = self.cmd.spawn().unwrap();
+        let mut lines = BufReader::new(p.stdout.take().unwrap()).lines();
 
-        let mut lines = res.stdout.lines();
+        let mut i = 0;
         while let Some(Ok(line)) = lines.next() {
             self.buf.push(line);
+            i += 1;
+
+            if i == 1024 {
+                i = 0;
+                self.draw();
+            }
         }
 
         // ensure that the scroll position/cursor is within the text
@@ -224,7 +230,8 @@ impl State {
                     Action::Jump(i, line.len())
                 }
                 's' => {
-                    let i = self.cursor.1 as usize + self.scroll.1;
+                    let i = (self.cursor.1 as usize + self.scroll.1)
+                        .min(self.buf.len().saturating_sub(1));
                     let n = self.buf[i]
                         .chars()
                         .enumerate()

@@ -1,4 +1,5 @@
 use std::io::prelude::*;
+use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 
 use inotify::Inotify;
@@ -16,6 +17,10 @@ fn main() {
     } else if let Some(c) = opts.cmd.as_ref() {
         cmd.arg(c);
     };
+
+    cmd.stdin(Stdio::piped());
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
 
     // initialise the ui and surround with arc/mutex for sharing across threads
     let s = Arc::new(Mutex::new(ui::State::init(cmd, opts)));
