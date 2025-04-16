@@ -1,4 +1,3 @@
-- fix overdraw
 - screen resize
 - err exit
 - highlight diffs
