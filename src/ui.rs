@@ -105,7 +105,13 @@ impl State {
     }
 
     fn right(&mut self) {
-        if self.cursor.0 == self.term_size.0 - 1 {
+        let num_digs = if self.buf.len() == 0 {
+            0
+        } else {
+            self.buf.len().ilog10()
+        } + 1;
+
+        if self.cursor.0 == self.term_size.0 - num_digs as u16 - 3 {
             self.scroll.0 += 1;
         } else {
             self.cursor.0 = (self.cursor.0 + 1).min(self.term_size.0 - 1);
@@ -336,7 +342,7 @@ impl State {
 
             UnicodeSegmentation::graphemes(line.as_str(), true)
                 .skip(self.scroll.0)
-                .take(self.term_size.0 as usize)
+                .take(self.term_size.0 as usize - num_digs as usize - 2)
                 .for_each(|s| print!("{s}"));
         }
 
@@ -348,7 +354,7 @@ impl State {
             .unwrap();
 
         print!(
-            "{} {}",
+            "{} {} {:?}",
             self.mode.to_string(),
             if let Some(f) = self.opts.file.as_ref() {
                 f.to_string_lossy()
@@ -358,7 +364,8 @@ impl State {
                     .map(|arg| arg.to_string_lossy())
                     .nth(1)
                     .unwrap()
-            }
+            },
+            self.term_size
         );
 
         let cur_s = format!(
