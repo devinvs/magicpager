@@ -354,7 +354,7 @@ impl State {
             .unwrap();
 
         print!(
-            "{} {} {:?}",
+            "{} {}",
             self.mode.to_string(),
             if let Some(f) = self.opts.file.as_ref() {
                 f.to_string_lossy()
@@ -365,7 +365,6 @@ impl State {
                     .nth(1)
                     .unwrap()
             },
-            self.term_size
         );
 
         let cur_s = format!(
