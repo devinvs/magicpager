@@ -334,13 +334,10 @@ impl State {
             print!("{:>width$}│ ", start_row + i + 1, width = num_digs as usize);
             stdout.queue(style::ResetColor).unwrap();
 
-            if self.scroll.0 > 0 {
-                UnicodeSegmentation::graphemes(line.as_str(), true)
-                    .skip(self.scroll.0)
-                    .for_each(|s| print!("{s}"));
-            } else {
-                print!("{line}");
-            }
+            UnicodeSegmentation::graphemes(line.as_str(), true)
+                .skip(self.scroll.0)
+                .take(self.term_size.0 as usize)
+                .for_each(|s| print!("{s}"));
         }
 
         // draw bottom bar

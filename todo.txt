@@ -1,5 +1,5 @@
-- escape quotes in preload.c
-- write the actual pager
-  + watch files/directories
-  + timer
-  + screen resize
+- fix overdraw
+- screen resize
+- err exit
+- highlight diffs
+- text/regex search
